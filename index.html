@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UIColor to Hex Converter</title>
+  <style>
+    body {
+      background: #f7f7f7;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    input[type="text"] {
+      width: calc(100% - 20px);
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      background: #3498db;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .color-preview {
+      margin-top: 20px;
+      height: 150px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+    .hex-code {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .copy-msg {
+      font-size: 14px;
+      color: green;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .copy-msg.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>UIColor to Hex Converter</h2>
+    <input type="text" id="colorInput" placeholder='Enter UIColor code e.g. "UIColor(red: 0.478, green: 0.933, blue: 0, alpha: 1)"'>
+    <div>
+      <button id="convertButton">Convert</button>
+      <button id="copyButton">Copy Hex</button>
+    </div>
+    <div class="color-preview" id="colorPreview"></div>
+    <div class="hex-code" id="hexOutput"></div>
+    <div class="copy-msg" id="copyMsg">Copied!</div>
+  </div>
+  
+  <script>
+    // Evaluates a number or a fractional expression like "1/255"
+    function evaluateFraction(expression) {
+      expression = expression.trim();
+      if (expression.includes('/')) {
+        const parts = expression.split('/');
+        return parseFloat(parts[0].trim()) / parseFloat(parts[1].trim());
+      } else {
+        return parseFloat(expression);
+      }
+    }
+    
+    // Convert RGBA (in 0-1 range) to a HEX string.
+    function rgbaToHex(red, green, blue, alpha) {
+      const toHex = (num) => {
+        let hex = Math.round(num * 255).toString(16).toUpperCase();
+        return hex.length === 1 ? '0' + hex : hex;
+      };
+      const hexRed = toHex(red);
+      const hexGreen = toHex(green);
+      const hexBlue = toHex(blue);
+      if (alpha < 1) {
+        const hexAlpha = toHex(alpha);
+        return '#' + hexRed + hexGreen + hexBlue + hexAlpha;
+      } else {
+        return '#' + hexRed + hexGreen + hexBlue;
+      }
+    }
+    
+    // Convert white (grayscale) value and alpha to HEX.
+    function whiteToHex(white, alpha) {
+      const gray = white * 255;
+      let hexGray = Math.round(gray).toString(16).toUpperCase();
+      if (hexGray.length === 1) hexGray = '0' + hexGray;
+      if (alpha < 1) {
+        let hexAlpha = Math.round(alpha * 255).toString(16).toUpperCase();
+        if (hexAlpha.length === 1) hexAlpha = '0' + hexAlpha;
+        return '#' + hexGray + hexGray + hexGray + hexAlpha;
+      } else {
+        return '#' + hexGray + hexGray + hexGray;
+      }
+    }
+    
+    // Parse the input string for various UIColor definitions and return its HEX representation.
+    function getColorHex(input) {
+      // Regex for RGBA pattern (supports fractional expressions like "1/255")
+      const rgbaRegex = /red:\s*([\d./\s]+),\s*green:\s*([\d./\s]+),\s*blue:\s*([\d./\s]+),\s*alpha:\s*([\d./\s]+)/;
+      // Regex for white & alpha pattern
+      const whiteRegex = /white:\s*([\d./\s]+),\s*alpha:\s*([\d./\s]+)/;
+      // Regex for hexString pattern
+      const hexStringRegex = /hexString:\s*"#?([0-9A-Fa-f]{6,8})"/;
+      
+      let match = input.match(rgbaRegex);
+      if (match) {
+        const red = evaluateFraction(match[1]);
+        const green = evaluateFraction(match[2]);
+        const blue = evaluateFraction(match[3]);
+        const alpha = evaluateFraction(match[4]);
+        return rgbaToHex(red, green, blue, alpha);
+      }
+      
+      match = input.match(whiteRegex);
+      if (match) {
+        const white = evaluateFraction(match[1]);
+        const alpha = evaluateFraction(match[2]);
+        return whiteToHex(white, alpha);
+      }
+      
+      match = input.match(hexStringRegex);
+      if (match) {
+        const hex = match[1].toUpperCase();
+        if (hex.length === 6 || hex.length === 8) {
+          return '#' + hex;
+        }
+      }
+      return '';
+    }
+    
+    function updateColor() {
+      let input = document.getElementById('colorInput').value;
+      // If wrapped in "UIColor(...)" strip the wrapper.
+      if (input.startsWith("UIColor(") && input.endsWith(")")) {
+        input = input.slice(8, -1);
+      }
+      
+      const hexCode = getColorHex(input);
+      if (hexCode) {
+        document.getElementById('colorPreview').style.backgroundColor = hexCode;
+        document.getElementById('hexOutput').textContent = 'Hex: ' + hexCode;
+      } else {
+        alert('Invalid UIColor format. Please enter a valid UIColor definition.');
+      }
+    }
+    
+    // Event listener for the Convert button.
+    document.getElementById('convertButton').addEventListener('click', updateColor);
+    
+    // Listen for "Enter" key on the input field.
+    document.getElementById('colorInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        updateColor();
+      }
+    });
+    
+    // Copy the hex code to clipboard when the Copy button is pressed.
+    document.getElementById('copyButton').addEventListener('click', function() {
+      const hexText = document.getElementById('hexOutput').textContent.replace('Hex: ', '');
+      if (!hexText) return;
+      
+      // Use the Clipboard API.
+      navigator.clipboard.writeText(hexText).then(() => {
+        const copyMsg = document.getElementById('copyMsg');
+        copyMsg.classList.add('show');
+        setTimeout(() => {
+          copyMsg.classList.remove('show');
+        }, 1500);
+      }).catch(err => {
+        alert('Failed to copy text: ' + err);
+      });
+    });
+  </script>
+</body>
+</html>
